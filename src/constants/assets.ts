@@ -15,7 +15,7 @@ export const PLATFORM = {
   promoCode: 'XRR74',
   registrationUrl:
     'https://refpa96317.com/L?tag=d_5108633m_11213c_&site=5108633&ad=11213&r=registration',
-  telegramUrl: 'https://t.me/+hAD1EvK9OaUxOTg0',
+  telegramUrl: 'https://t.me/+-RZqYTzCFbphNjNk',
 } as const;
 
 export const getPromoCode = (): string => {
