@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react';
+import { ChangeEvent, ReactNode, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   ArrowRight,
@@ -8,9 +8,12 @@ import {
   CreditCard,
   Fingerprint,
   Globe,
+  ImagePlus,
+  KeyRound,
   Lock,
   ShieldCheck,
   Sparkles,
+  Trash2,
   Volume2,
   VolumeX,
   X,
@@ -94,59 +97,171 @@ export function SetupScreen({
 }: SetupScreenProps) {
   const [copied, setCopied] = useState(false);
   const [userId, setUserId] = useState(initialUserId);
-  const [errors, setErrors] = useState<{ userId?: boolean; userIdLength?: boolean }>({});
+  const [invitePreview, setInvitePreview] = useState<string | null>(null);
+  const [inviteName, setInviteName] = useState('');
+  const [promoPreview, setPromoPreview] = useState<string | null>(null);
+  const [promoName, setPromoName] = useState('');
+  const [errors, setErrors] = useState<{
+    userId?: boolean;
+    inviteScreen?: boolean;
+    promoScreen?: boolean;
+  }>({});
   const [showModal, setShowModal] = useState(false);
-  const [verifyStage, setVerifyStage] = useState<'step1' | 'step2' | 'ready'>('step1');
+  const [modalPhase, setModalPhase] = useState<'form' | 'loading' | 'ready'>('form');
+  const [verifyStage, setVerifyStage] = useState<'step1' | 'step2' | 'step3'>('step1');
+  const [generatedCode, setGeneratedCode] = useState('');
+  const [codeCopied, setCodeCopied] = useState(false);
   const [muted, setMuted] = useState(soundFx.isMuted());
   const [logoErr, setLogoErr] = useState(false);
   const [crashErr, setCrashErr] = useState(false);
+
+  const timersRef = useRef<number[]>([]);
+  const inviteUrlRef = useRef<string | null>(null);
+  const promoUrlRef = useRef<string | null>(null);
 
   const t = TRANSLATIONS[language];
   const isRtl = language === 'ar';
   const promoCode = getPromoCode();
 
-  const handleCopyPromo = async () => {
-    soundFx.playCopy();
+  const clearTimers = () => {
+    timersRef.current.forEach((id) => window.clearTimeout(id));
+    timersRef.current = [];
+  };
+
+  useEffect(() => {
+    return () => {
+      clearTimers();
+      if (inviteUrlRef.current) URL.revokeObjectURL(inviteUrlRef.current);
+      if (promoUrlRef.current) URL.revokeObjectURL(promoUrlRef.current);
+    };
+  }, []);
+
+  const copyTextSafe = async (text: string) => {
     try {
-      await navigator.clipboard.writeText(promoCode);
+      await navigator.clipboard.writeText(text);
     } catch {
-      // Fallback copy if clipboard API is restricted
       const textarea = document.createElement('textarea');
-      textarea.value = promoCode;
+      textarea.value = text;
       document.body.appendChild(textarea);
       textarea.select();
       document.execCommand('copy');
       document.body.removeChild(textarea);
     }
+  };
+
+  const handleCopyPromo = async () => {
+    soundFx.playCopy();
+    await copyTextSafe(promoCode);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleCopyGeneratedCode = async () => {
+    if (!generatedCode) return;
+    soundFx.playCopy();
+    await copyTextSafe(generatedCode);
+    setCodeCopied(true);
+    setTimeout(() => setCodeCopied(false), 2000);
+  };
+
+  const handleScreenUpload = (
+    type: 'invite' | 'promo',
+    e: ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    soundFx.playSoftClick();
+    const previewUrl = URL.createObjectURL(file);
+
+    if (type === 'invite') {
+      if (inviteUrlRef.current) URL.revokeObjectURL(inviteUrlRef.current);
+      inviteUrlRef.current = previewUrl;
+      setInvitePreview(previewUrl);
+      setInviteName(file.name);
+      setErrors((prev) => ({ ...prev, inviteScreen: false }));
+    } else {
+      if (promoUrlRef.current) URL.revokeObjectURL(promoUrlRef.current);
+      promoUrlRef.current = previewUrl;
+      setPromoPreview(previewUrl);
+      setPromoName(file.name);
+      setErrors((prev) => ({ ...prev, promoScreen: false }));
+    }
+    e.target.value = '';
+  };
+
+  const handleRemoveScreen = (type: 'invite' | 'promo') => {
+    soundFx.playClick();
+    if (type === 'invite') {
+      if (inviteUrlRef.current) URL.revokeObjectURL(inviteUrlRef.current);
+      inviteUrlRef.current = null;
+      setInvitePreview(null);
+      setInviteName('');
+    } else {
+      if (promoUrlRef.current) URL.revokeObjectURL(promoUrlRef.current);
+      promoUrlRef.current = null;
+      setPromoPreview(null);
+      setPromoName('');
+    }
+  };
+
+  const handleOpenStepsModal = () => {
+    soundFx.playClick();
+    clearTimers();
+    setErrors({});
+    setModalPhase(generatedCode ? 'ready' : 'form');
+    setShowModal(true);
+  };
+
+  const handleCloseModal = () => {
+    soundFx.playClick();
+    clearTimers();
+    setShowModal(false);
+    if (modalPhase === 'loading') {
+      setModalPhase('form');
+    }
   };
 
   const handleVerifySubmit = () => {
     soundFx.playClick();
     const cleaned = userId.trim();
-    const validLength = cleaned.length >= 10 && cleaned.length <= 15;
+    const validId = cleaned.length >= 10 && cleaned.length <= 15;
     const nextErrors = {
-      userId: !cleaned,
-      userIdLength: !validLength,
+      userId: !validId,
+      inviteScreen: !invitePreview,
+      promoScreen: !promoPreview,
     };
     setErrors(nextErrors);
 
-    if (!nextErrors.userId && !nextErrors.userIdLength) {
-      soundFx.playScan();
-      setShowModal(true);
-      setVerifyStage('step1');
-      setTimeout(() => {
-        soundFx.playSoftClick();
-        setVerifyStage('step2');
-      }, 1100);
-      setTimeout(() => {
-        soundFx.playSuccess();
-        setVerifyStage('ready');
-      }, 2200);
-    } else {
+    if (nextErrors.userId || nextErrors.inviteScreen || nextErrors.promoScreen) {
       soundFx.playError();
+      return;
     }
+
+    clearTimers();
+    soundFx.playScan();
+    setModalPhase('loading');
+    setVerifyStage('step1');
+
+    const t1 = window.setTimeout(() => {
+      soundFx.playSoftClick();
+      setVerifyStage('step2');
+    }, 1000);
+
+    const t2 = window.setTimeout(() => {
+      soundFx.playSoftClick();
+      setVerifyStage('step3');
+    }, 2000);
+
+    const t3 = window.setTimeout(async () => {
+      const code = `1X-${promoCode}-${cleaned.slice(-4)}`;
+      setGeneratedCode(code);
+      setModalPhase('ready');
+      soundFx.playSuccess();
+      await copyTextSafe(code);
+      setCodeCopied(true);
+    }, 3000);
+
+    timersRef.current = [t1, t2, t3];
   };
 
   const toggleSound = () => {
@@ -401,12 +516,12 @@ export function SetupScreen({
             </div>
           </StepCard>
 
-          {/* Step 03: Verify Account ID */}
+          {/* Step 03: Get Code via Steps Button */}
           <StepCard
             number="03"
             label={t.step3Label}
             title={t.step3Title}
-            icon={Fingerprint}
+            icon={KeyRound}
             image={ASSETS.verifyBadge}
           >
             <div className="flex flex-col gap-4">
@@ -414,57 +529,9 @@ export function SetupScreen({
                 {t.step3Desc}
               </p>
 
-              <div>
-                <label
-                  htmlFor="dbbet-user-id"
-                  className="mb-1.5 block text-[11px] font-black uppercase tracking-[0.18em] text-white/60"
-                >
-                  {t.userIdLabel}
-                </label>
-
-                <div className="relative">
-                  <div
-                    className={`absolute inset-y-0 flex items-center justify-center border-white/10 px-3 ${
-                      isRtl ? 'right-0 border-l' : 'left-0 border-r'
-                    }`}
-                  >
-                    <Fingerprint
-                      className={`h-6 w-6 ${userId ? 'text-[#3B82F6]' : 'text-white/30'}`}
-                    />
-                  </div>
-                  <input
-                    id="dbbet-user-id"
-                    type="tel"
-                    inputMode="numeric"
-                    value={userId}
-                    onChange={(e) => {
-                      const digits = e.target.value.replace(/[^0-9]/g, '');
-                      if (digits.length <= 15) {
-                        setUserId(digits);
-                        if (digits.length >= 10) {
-                          setErrors({ userId: false, userIdLength: false });
-                        }
-                      }
-                    }}
-                    placeholder={t.userIdPlaceholder}
-                    maxLength={15}
-                    className={`w-full rounded-2xl border bg-black/60 py-3.5 font-mono text-lg text-white transition-all placeholder:text-white/25 focus:outline-none ${
-                      isRtl ? 'pl-4 pr-16 text-right' : 'pl-16 pr-4 text-left'
-                    } ${
-                      errors.userId || errors.userIdLength
-                        ? 'border-red-500/80 focus:border-red-500'
-                        : 'border-white/10 focus:border-[#3B82F6]'
-                    }`}
-                  />
-                </div>
-
-                {(errors.userId || errors.userIdLength) && (
-                  <p className="mt-2 text-xs font-bold text-red-400">{t.userIdError}</p>
-                )}
-              </div>
-
-              <button type="button" onClick={handleVerifySubmit} className={PRIMARY_CTA_CLASS}>
-                <span>{t.submitVerify}</span>
+              <button type="button" onClick={handleOpenStepsModal} className={PRIMARY_CTA_CLASS}>
+                <KeyRound className="h-4 w-4" />
+                <span>{t.getCodeViaStepsBtn}</span>
                 <ArrowRight className={`h-4 w-4 ${isRtl ? 'rotate-180' : ''}`} />
               </button>
             </div>
@@ -485,125 +552,371 @@ export function SetupScreen({
         </div>
       </div>
 
-      {/* Verification Modal */}
+      {/* Get Code via Steps Modal */}
       <AnimatePresence>
         {showModal && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-end justify-center bg-black/90 p-4 backdrop-blur-2xl sm:items-center"
+            className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-black/90 p-3 backdrop-blur-2xl sm:items-center sm:p-4"
           >
             <motion.div
               initial={{ y: 60, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 60, opacity: 0 }}
               transition={{ type: 'spring', damping: 26, stiffness: 260 }}
-              className="relative w-full max-w-[400px] overflow-hidden rounded-[26px] border border-[rgba(59,130,246,0.25)] bg-[#030712]"
+              className="relative my-auto w-full max-w-[440px] overflow-hidden rounded-[26px] border border-[rgba(59,130,246,0.28)] bg-[#030712]"
             >
               {/* Modal Header */}
               <div className="flex items-center justify-between border-b border-white/[0.07] bg-[rgba(59,130,246,0.06)] px-5 py-3.5">
-                <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-[#3B82F6] shadow-[0_0_10px_#3B82F6]" />
-                  <span className="text-[11px] font-black tracking-[0.12em] text-[#3B82F6]">
-                    {t.brandTitle}
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="h-2 w-2 shrink-0 rounded-full bg-[#3B82F6] shadow-[0_0_10px_#3B82F6]" />
+                  <span className="truncate text-xs font-black tracking-wide text-[#3B82F6]">
+                    {t.stepsModalTitle}
                   </span>
                 </div>
                 <button
                   type="button"
-                  onClick={() => {
-                    soundFx.playClick();
-                    setShowModal(false);
-                  }}
+                  onClick={handleCloseModal}
                   aria-label="Close"
-                  className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-white/10 text-white/60 transition-all hover:text-white active:scale-90"
+                  className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-white/10 text-white/60 transition-all hover:text-white active:scale-90"
                 >
                   <X className="h-4 w-4" />
                 </button>
               </div>
 
               {/* Modal Body */}
-              <div className="px-5 py-6">
-                <div className="flex items-center gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-3.5">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[rgba(59,130,246,0.3)] bg-[rgba(59,130,246,0.08)]">
-                    <Fingerprint className="h-5 w-5 text-[#3B82F6]" />
-                  </div>
-                  <div className="min-w-0">
-                    <span className="block text-[10px] font-black uppercase tracking-[0.2em] text-white/40">
-                      {t.accountId}
-                    </span>
-                    <span className="block truncate font-mono text-lg font-black tracking-wider text-white">
-                      {userId}
-                    </span>
-                  </div>
-                  <div
-                    dir="ltr"
-                    className={`rounded-lg border border-[rgba(59,130,246,0.25)] bg-black px-2.5 py-1 font-mono text-[11px] font-black text-[#3B82F6] ${
-                      isRtl ? 'mr-auto' : 'ml-auto'
-                    }`}
-                  >
-                    {promoCode}
-                  </div>
-                </div>
+              <div className="max-h-[82vh] overflow-y-auto px-5 py-5">
+                {modalPhase === 'form' && (
+                  <div className="flex flex-col gap-4">
+                    <p className="text-xs leading-relaxed text-white/65">
+                      {t.stepsModalSubtitle}
+                    </p>
 
-                {/* 3 Verification Steps */}
-                <div className="mt-5 flex flex-col gap-2.5">
-                  {[
-                    { key: 'step1', text: t.verifyStep1 },
-                    { key: 'step2', text: t.verifyStep2 },
-                    { key: 'ready', text: t.verifyStep3 },
-                  ].map((step, idx) => {
-                    const order = ['step1', 'step2', 'ready'];
-                    const currentIdx = order.indexOf(verifyStage);
-                    const done = currentIdx > idx || verifyStage === 'ready';
-                    const active = currentIdx === idx && verifyStage !== 'ready';
-
-                    return (
-                      <div
-                        key={step.key}
-                        className={`flex items-center gap-3 rounded-xl border px-3.5 py-3 transition-all duration-500 ${
-                          done
-                            ? 'border-[rgba(59,130,246,0.35)] bg-[rgba(59,130,246,0.07)]'
-                            : active
-                            ? 'border-white/15 bg-white/[0.04]'
-                            : 'border-white/[0.06] bg-transparent'
-                        }`}
+                    {/* ID Input inside Steps Modal */}
+                    <div>
+                      <label
+                        htmlFor="steps-user-id"
+                        className="mb-1.5 block text-[11px] font-black uppercase tracking-[0.16em] text-white/70"
                       >
-                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-white/10 bg-black">
-                          {done ? (
-                            <Check className="h-3.5 w-3.5 text-[#3B82F6]" />
-                          ) : active ? (
-                            <motion.div
-                              animate={{ rotate: 360 }}
-                              transition={{ duration: 1.1, repeat: Infinity, ease: 'linear' }}
-                              className="h-3.5 w-3.5 rounded-full border border-[rgba(59,130,246,0.2)] border-t-[#3B82F6]"
-                            />
-                          ) : (
-                            <span className="h-1.5 w-1.5 rounded-full bg-white/20" />
-                          )}
-                        </span>
-                        <span
-                          className={`text-xs font-bold ${
-                            done ? 'text-white' : active ? 'text-white/75' : 'text-white/35'
+                        {t.userIdLabel}
+                      </label>
+
+                      <div className="relative">
+                        <div
+                          className={`absolute inset-y-0 flex items-center justify-center border-white/10 px-3 ${
+                            isRtl ? 'right-0 border-l' : 'left-0 border-r'
                           }`}
                         >
-                          {step.text}
-                        </span>
+                          <Fingerprint
+                            className={`h-5 w-5 ${userId ? 'text-[#3B82F6]' : 'text-white/30'}`}
+                          />
+                        </div>
+                        <input
+                          id="steps-user-id"
+                          type="tel"
+                          inputMode="numeric"
+                          value={userId}
+                          onChange={(e) => {
+                            const digits = e.target.value.replace(/[^0-9]/g, '');
+                            if (digits.length <= 15) {
+                              setUserId(digits);
+                              if (digits.length >= 10) {
+                                setErrors((prev) => ({ ...prev, userId: false }));
+                              }
+                            }
+                          }}
+                          placeholder={t.userIdPlaceholder}
+                          maxLength={15}
+                          className={`w-full rounded-2xl border bg-black/60 py-3 font-mono text-base text-white transition-all placeholder:text-white/25 focus:outline-none ${
+                            isRtl ? 'pl-4 pr-14 text-right' : 'pl-14 pr-4 text-left'
+                          } ${
+                            errors.userId
+                              ? 'border-red-500/80 focus:border-red-500'
+                              : 'border-white/10 focus:border-[#3B82F6]'
+                          }`}
+                        />
                       </div>
-                    );
-                  })}
-                </div>
 
-                {verifyStage === 'ready' ? (
+                      {errors.userId && (
+                        <p className="mt-1.5 text-[11px] font-bold text-red-400">
+                          {t.userIdError}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Two Screenshot Uploaders: Invitation & Promo */}
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      {/* Invitation Screenshot */}
+                      <div className="flex flex-col">
+                        <span className="mb-1.5 block text-[11px] font-black text-white/75">
+                          {t.inviteScreenLabel}
+                        </span>
+                        {invitePreview ? (
+                          <div className="relative overflow-hidden rounded-2xl border border-[#3B82F6]/45 bg-black/70 p-2">
+                            <img
+                              src={invitePreview}
+                              alt={t.inviteScreenLabel}
+                              className="h-28 w-full rounded-xl object-cover"
+                            />
+                            <div className="mt-2 flex items-center justify-between gap-2 px-1">
+                              <span className="truncate text-[10px] font-semibold text-white/60">
+                                {inviteName}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveScreen('invite')}
+                                aria-label="Remove invitation screenshot"
+                                className="flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-lg bg-red-500/15 text-red-400 transition-colors hover:bg-red-500/25"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <label
+                            className={`flex h-32 cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed bg-black/50 p-3 text-center transition-all hover:border-[#3B82F6] hover:bg-[#3B82F6]/5 ${
+                              errors.inviteScreen
+                                ? 'border-red-500/75'
+                                : 'border-white/15'
+                            }`}
+                          >
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => handleScreenUpload('invite', e)}
+                            />
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#3B82F6]/30 bg-[#3B82F6]/10">
+                              <ImagePlus className="h-5 w-5 text-[#3B82F6]" />
+                            </div>
+                            <span className="text-[11px] font-bold text-white/70">
+                              {t.uploadScreenHint}
+                            </span>
+                          </label>
+                        )}
+                        {errors.inviteScreen && (
+                          <p className="mt-1.5 text-[11px] font-bold text-red-400">
+                            {t.missingInviteScreen}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Promo Screenshot */}
+                      <div className="flex flex-col">
+                        <span className="mb-1.5 block text-[11px] font-black text-white/75">
+                          {t.promoScreenLabel}
+                        </span>
+                        {promoPreview ? (
+                          <div className="relative overflow-hidden rounded-2xl border border-[#3B82F6]/45 bg-black/70 p-2">
+                            <img
+                              src={promoPreview}
+                              alt={t.promoScreenLabel}
+                              className="h-28 w-full rounded-xl object-cover"
+                            />
+                            <div className="mt-2 flex items-center justify-between gap-2 px-1">
+                              <span className="truncate text-[10px] font-semibold text-white/60">
+                                {promoName}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveScreen('promo')}
+                                aria-label="Remove promo screenshot"
+                                className="flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-lg bg-red-500/15 text-red-400 transition-colors hover:bg-red-500/25"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <label
+                            className={`flex h-32 cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed bg-black/50 p-3 text-center transition-all hover:border-[#3B82F6] hover:bg-[#3B82F6]/5 ${
+                              errors.promoScreen
+                                ? 'border-red-500/75'
+                                : 'border-white/15'
+                            }`}
+                          >
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => handleScreenUpload('promo', e)}
+                            />
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#3B82F6]/30 bg-[#3B82F6]/10">
+                              <ImagePlus className="h-5 w-5 text-[#3B82F6]" />
+                            </div>
+                            <span className="text-[11px] font-bold text-white/70">
+                              {t.uploadScreenHint}
+                            </span>
+                          </label>
+                        )}
+                        {errors.promoScreen && (
+                          <p className="mt-1.5 text-[11px] font-bold text-red-400">
+                            {t.missingPromoScreen}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleVerifySubmit}
+                      className={PRIMARY_CTA_CLASS}
+                    >
+                      <Zap className="h-4 w-4 fill-black" />
+                      <span>{t.generateCodeBtn}</span>
+                    </button>
+                  </div>
+                )}
+
+                {modalPhase === 'loading' && (
+                  <div className="flex flex-col items-center py-3 text-center">
+                    <div className="relative flex h-20 w-20 items-center justify-center">
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                        className="absolute inset-0 rounded-full border-2 border-[#3B82F6]/20 border-t-[#3B82F6]"
+                      />
+                      <KeyRound className="h-8 w-8 animate-pulse text-[#3B82F6]" />
+                    </div>
+
+                    <h3 className="mt-4 text-sm font-black text-white">{t.loadingCodeTitle}</h3>
+                    <p className="mt-1 text-xs text-white/55">{t.loadingCodeSubtitle}</p>
+
+                    {/* 3-Second Progress Bar */}
+                    <div className="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+                      <motion.div
+                        initial={{ width: '0%' }}
+                        animate={{ width: '100%' }}
+                        transition={{ duration: 3, ease: 'linear' }}
+                        className="h-full rounded-full bg-gradient-to-l from-[#3B82F6] to-white shadow-[0_0_12px_#3B82F6]"
+                      />
+                    </div>
+
+                    <div className="mt-5 flex w-full flex-col gap-2.5 text-start">
+                      {[
+                        { key: 'step1', text: t.verifyStep1 },
+                        { key: 'step2', text: t.verifyStep2 },
+                        { key: 'step3', text: t.verifyStep3 },
+                      ].map((step, idx) => {
+                        const order = ['step1', 'step2', 'step3'];
+                        const currentIdx = order.indexOf(verifyStage);
+                        const done = currentIdx > idx;
+                        const active = currentIdx === idx;
+
+                        return (
+                          <div
+                            key={step.key}
+                            className={`flex items-center gap-3 rounded-xl border px-3.5 py-2.5 transition-all duration-300 ${
+                              done
+                                ? 'border-[rgba(59,130,246,0.35)] bg-[rgba(59,130,246,0.07)]'
+                                : active
+                                ? 'border-white/15 bg-white/[0.04]'
+                                : 'border-white/[0.06] bg-transparent'
+                            }`}
+                          >
+                            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-white/10 bg-black">
+                              {done ? (
+                                <Check className="h-3.5 w-3.5 text-[#3B82F6]" />
+                              ) : active ? (
+                                <motion.div
+                                  animate={{ rotate: 360 }}
+                                  transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                                  className="h-3.5 w-3.5 rounded-full border border-[rgba(59,130,246,0.2)] border-t-[#3B82F6]"
+                                />
+                              ) : (
+                                <span className="h-1.5 w-1.5 rounded-full bg-white/20" />
+                              )}
+                            </span>
+                            <span
+                              className={`text-xs font-bold ${
+                                done ? 'text-white' : active ? 'text-white/75' : 'text-white/35'
+                              }`}
+                            >
+                              {step.text}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {modalPhase === 'ready' && (
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="mt-6"
+                    className="flex flex-col gap-4"
                   >
-                    <div className="mb-4 flex items-center justify-center gap-2 text-xs font-black text-[#3B82F6]">
-                      <CircleCheck className="h-4 w-4" />
-                      <span>{t.verifySuccess}</span>
+                    <div className="flex items-center gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-3.5">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[rgba(59,130,246,0.3)] bg-[rgba(59,130,246,0.08)]">
+                        <Fingerprint className="h-5 w-5 text-[#3B82F6]" />
+                      </div>
+                      <div className="min-w-0">
+                        <span className="block text-[10px] font-black uppercase tracking-[0.2em] text-white/40">
+                          {t.accountId}
+                        </span>
+                        <span className="block truncate font-mono text-base font-black tracking-wider text-white">
+                          {userId}
+                        </span>
+                      </div>
+                      <div
+                        dir="ltr"
+                        className={`rounded-lg border border-[rgba(59,130,246,0.25)] bg-black px-2.5 py-1 font-mono text-[11px] font-black text-[#3B82F6] ${
+                          isRtl ? 'mr-auto' : 'ml-auto'
+                        }`}
+                      >
+                        {promoCode}
+                      </div>
                     </div>
+
+                    {/* Automatically Generated Activation Code Box */}
+                    <button
+                      type="button"
+                      onClick={handleCopyGeneratedCode}
+                      className="group w-full cursor-pointer rounded-2xl border-2 border-dashed border-[#3B82F6]/60 bg-[#3B82F6]/10 p-4 text-start transition-all hover:border-[#3B82F6]"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <span className="block text-[10px] font-black uppercase tracking-[0.16em] text-white/60">
+                            {t.generatedCodeLabel}
+                          </span>
+                          <span
+                            dir="ltr"
+                            className="mt-1 inline-block font-mono text-xl font-black tracking-[0.16em] text-[#3B82F6] drop-shadow-[0_0_14px_rgba(59,130,246,0.65)] sm:text-2xl"
+                          >
+                            {generatedCode}
+                          </span>
+                        </div>
+
+                        <div
+                          className={`flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold ${
+                            codeCopied
+                              ? 'bg-[#3B82F6] text-black'
+                              : 'bg-black/60 text-white/85 group-hover:text-[#3B82F6]'
+                          }`}
+                        >
+                          {codeCopied ? (
+                            <>
+                              <Check className="h-4 w-4" />
+                              <span>{t.copied}</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="h-4 w-4" />
+                              <span>{t.copyCode}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+
+                    <div className="flex items-center justify-center gap-2 text-xs font-black text-[#3B82F6]">
+                      <CircleCheck className="h-4 w-4 shrink-0" />
+                      <span>{codeCopied ? t.autoCopiedBadge : t.verifySuccess}</span>
+                    </div>
+
                     <button
                       type="button"
                       onClick={() => {
@@ -617,10 +930,6 @@ export function SetupScreen({
                       <span>{t.enterPredictions}</span>
                     </button>
                   </motion.div>
-                ) : (
-                  <p className="mt-6 text-center text-[11px] font-black uppercase tracking-[0.2em] text-white/35">
-                    {t.verifyingWait}
-                  </p>
                 )}
               </div>
             </motion.div>
