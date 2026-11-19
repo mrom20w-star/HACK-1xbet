@@ -1,0 +1,222 @@
+export type Language = 'ar' | 'en';
+export type GameType = 'crash';
+export type AppScreen = 'splash' | 'setup' | 'crash_game';
+
+export const ASSETS = {
+  brandLogo: '/src/assets/images/onexbet_logo_1795091768313.jpg',
+  crashPlane: '/src/assets/images/crash_plane_1795091031969.jpg',
+  verifyBadge: '/src/assets/images/neon_verify_badge_1795091031611.jpg',
+} as const;
+
+export const PLATFORM = {
+  id: '1xbet',
+  name: '1xBet',
+  brandTitle: 'هاك 1 اكس بت',
+  promoCode: 'XRR74',
+  registrationUrl:
+    'https://refpa96317.com/L?tag=d_5108633m_11213c_&site=5108633&ad=11213&r=registration',
+  telegramUrl: 'https://t.me/+hAD1EvK9OaUxOTg0',
+} as const;
+
+export const getPromoCode = (): string => {
+  return PLATFORM.promoCode;
+};
+
+export interface AppleLevel {
+  value: string;
+  label: string;
+  goodCount: number;
+  badCount: number;
+}
+
+export const APPLE_LEVELS: AppleLevel[] = [
+  { value: '1.23', label: 'x1.23', goodCount: 4, badCount: 1 },
+  { value: '1.54', label: 'x1.54', goodCount: 4, badCount: 1 },
+  { value: '1.94', label: 'x1.94', goodCount: 4, badCount: 1 },
+  { value: '2.41', label: 'x2.41', goodCount: 4, badCount: 1 },
+  { value: '4.02', label: 'x4.02', goodCount: 3, badCount: 2 },
+  { value: '6.71', label: 'x6.71', goodCount: 3, badCount: 2 },
+  { value: '11.18', label: 'x11.18', goodCount: 3, badCount: 2 },
+  { value: '27.97', label: 'x27.97', goodCount: 2, badCount: 3 },
+  { value: '69.93', label: 'x69.93', goodCount: 2, badCount: 3 },
+  { value: '349.68', label: 'x349.68', goodCount: 1, badCount: 4 },
+];
+
+export const BAD_COUNTS_PER_LEVEL = [1, 1, 1, 1, 2, 2, 2, 3, 3, 4];
+
+export const TRANSLATIONS = {
+  ar: {
+    splashStages: [
+      'تأمين الاتصال...',
+      'مزامنة البيانات...',
+      'تحسين الأداء...',
+      'النظام جاهز',
+    ],
+    brandTitle: 'هاك 1 اكس بت',
+    activationBadge: 'شروط تفعيل هاك 1 اكس بت',
+    heroDesc:
+      'نفّذ الشروط الثلاثة بالترتيب من الأعلى للأسفل، ثم أدخل ID حسابك في نهاية الصفحة لتفعيل التوقعات.',
+    instantActivation: 'تفعيل فوري · 3 خطوات',
+    chooseGame: 'اختر اللعبة',
+    crashTitle: 'الطيارة',
+    crashPredictorDesc: 'توقع مضاعف الطائرة بدقة عالية عبر الرادار الفوري',
+    promoLabel: 'البروموكود:',
+    step1Label: 'الشرط الأول',
+    step1Title: 'التسجيل بالبروموكود',
+    step1Desc:
+      'عند إنشاء حسابك الجديد على المنصة، أدخل الرمز الترويجي التالي لتفعيل خصم السيرفر وضمان مزامنة التوقعات:',
+    approvedPromo: 'كود البروموكود المعتمد',
+    copyCode: 'نسخ الكود',
+    copied: 'تم النسخ!',
+    step2Label: 'الشرط الثاني',
+    step2Title: 'إيداع التفعيل الأول',
+    step2Desc:
+      'يتطلب تفعيل الخوارزمية إجراء أول عملية إيداع بالحساب للحد الأدنى المطلوب:',
+    depositAutoNote: 'يتم تأكيد الإيداع تلقائياً عبر السيرفر خلال ثوانٍ.',
+    step3Label: 'الشرط الثالث والأخير',
+    step3Title: 'تأكيد ومعرفة ID الحساب',
+    step3Desc:
+      'أدخل رقم معرف حسابك (ID) المكون من 10 إلى 15 رقم للتحقق من المزامنة وبدء التوقعات فوراً:',
+    userIdLabel: 'معرف حسابك (User ID)',
+    userIdPlaceholder: 'مثال: 1234567890',
+    userIdError: 'يرجى إدخال رقم ID صحيح مكون من 10 إلى 15 أرقام.',
+    submitVerify: 'تأكيد وتفعيل الحساب',
+    serverVerifyNote: 'يتم التأكد من صحة البيانات تلقائياً عبر السيرفر الفوري',
+    footerSecurity: 'تشفير حماية عالي الأمان | هاك 1 اكس بت',
+    accountId: 'معرف الحساب',
+    verifyStep1: 'فحص المعرف على السيرفر',
+    verifyStep2: 'مطابقة البروموكود والمزامنة',
+    verifyStep3: 'ربط حسابك بخوارزمية التوقع',
+    verifySuccess: 'تم تفعيل الحساب بنجاح',
+    enterPredictions: 'الدخول إلى التوقعات',
+    verifyingWait: 'جاري التحقق... لا تغلق النافذة',
+    back: 'رجوع',
+    live: 'نشط',
+    applePredictorTitle: 'توقع التفاحة',
+    applePredictorDesc: 'اكتشف التفاحة السليمة بدقة ٩٩٪ لكل مستوى',
+    levelPrefix: 'المستوى',
+    selectedLevel: 'المستوى المحدّد:',
+    syncingServer: 'مزامنة السيرفر',
+    startAnalysis: 'بدء التحليل',
+    nextLevel: 'المستوى التالي',
+    restart: 'إعادة',
+    reset: 'تصفير',
+    telegramChannel: 'قناة التلجرام',
+    crashPredictorTitle: 'توقع الطائرة',
+    analyzingLabel: 'تحليل',
+    oddLabel: 'الأودد',
+    connectingServer: 'جاري الربط مع السيرفر...',
+    confirmedPrediction: 'توقع مؤكد ١٠٠٪',
+    pressStartToPredict: 'اضغط بدء لاستخراج التوقع',
+    prevPredictions: 'التوقعات السابقة',
+    startBtn: 'بدء',
+    switchToCrash: 'الطيارة',
+    switchToApple: 'التفاحة',
+    dbClosedTitle: 'قاعدة البيانات مغلقة',
+    dbClosedDesc: 'تم إيقاف التوقعات لأن مسار قاعدة البيانات مغلق حالياً.',
+    waitingPhase: 'جاهز للإقلاع',
+    flightPhase: 'الطائرة في الجو · التحديث مقفل',
+    crashedPhase: 'انتهت الجولة · انتظار الجولة الجديدة',
+    waitingNextRound: 'بانتظار بدء مرحلة الانتظار للجولة القادمة...',
+    roundLabel: 'جولة',
+    noHistoryYet: 'لا توجد جولات منتهية بعد',
+    overrideToggle: 'تعيين توقع مخصص (Override)',
+    overrideRoundPlaceholder: 'رقم الجولة',
+    overridePointPlaceholder: 'المضاعف (مثال: 2.50)',
+    overrideSend: 'إرسال Override',
+    overrideSent: 'تم إرسال التوقع المخصص بنجاح',
+    overrideErrorRound:
+      'ممنوع الإرسال لجولة بدأت بالفعل — أرسل للجولة الحالية أثناء waiting أو جولة قادمة.',
+    overrideErrorClosed: 'تعذر الإرسال: قاعدة البيانات مغلقة.',
+    overrideErrorGeneric: 'تعذر إرسال التوقع المخصص.',
+    autoSyncActive: 'جلب التوقعات التلقائي مفعّل · مزامنة فورية',
+    syncNowBtn: 'مزامنة تلقائية',
+  },
+  en: {
+    splashStages: [
+      'SECURING CONNECTION...',
+      'SYNCING DATA...',
+      'OPTIMIZING PERFORMANCE...',
+      'SYSTEM READY',
+    ],
+    brandTitle: 'Hack 1xBet',
+    activationBadge: 'Hack 1xBet Activation Terms',
+    heroDesc:
+      'Complete the 3 steps in order from top to bottom, then enter your account ID at the end to activate predictions.',
+    instantActivation: 'INSTANT ACTIVATION · 3 STEPS',
+    chooseGame: 'Select Game',
+    crashTitle: 'Crash',
+    crashPredictorDesc: 'Real-time multiplier extraction via server radar',
+    promoLabel: 'Promo Code:',
+    step1Label: 'Step 01',
+    step1Title: 'Register with Promo Code',
+    step1Desc:
+      'When creating your new account on the platform, enter the following promo code to ensure server synchronization:',
+    approvedPromo: 'Verified Promo Code',
+    copyCode: 'Copy Code',
+    copied: 'Copied!',
+    step2Label: 'Step 02',
+    step2Title: 'First Activation Deposit',
+    step2Desc:
+      'Activating the algorithm requires a minimum first deposit on your new account:',
+    depositAutoNote: 'Deposit is automatically confirmed via server within seconds.',
+    step3Label: 'Step 03 · Final',
+    step3Title: 'Verify Account ID',
+    step3Desc:
+      'Enter your 10 to 15-digit Account ID to verify synchronization and unlock predictions immediately:',
+    userIdLabel: 'Your Account ID (User ID)',
+    userIdPlaceholder: 'e.g. 1234567890',
+    userIdError: 'Please enter a valid 10 to 15-digit numeric User ID.',
+    submitVerify: 'Verify & Activate Account',
+    serverVerifyNote: 'Data is verified automatically via the real-time server',
+    footerSecurity: 'HIGH-SECURITY ENCRYPTION | Hack 1xBet',
+    accountId: 'Account ID',
+    verifyStep1: 'Checking User ID on server',
+    verifyStep2: 'Matching promo code & sync',
+    verifyStep3: 'Linking account to prediction engine',
+    verifySuccess: 'Account activated successfully',
+    enterPredictions: 'Enter Predictions',
+    verifyingWait: 'Verifying... Do not close this window',
+    back: 'Back',
+    live: 'LIVE',
+    applePredictorTitle: 'Apple Predictor',
+    applePredictorDesc: 'Find the safe apple with 99% accuracy per level',
+    levelPrefix: 'LVL',
+    selectedLevel: 'Current Multiplier:',
+    syncingServer: 'Syncing server',
+    startAnalysis: 'Start',
+    nextLevel: 'Next',
+    restart: 'Restart',
+    reset: 'Reset',
+    telegramChannel: 'Telegram channel',
+    crashPredictorTitle: 'Crash Predictor',
+    analyzingLabel: 'ANALYZING',
+    oddLabel: 'ODD',
+    connectingServer: 'Connecting to server...',
+    confirmedPrediction: '100% Confirmed Signal',
+    pressStartToPredict: 'Press Start to extract prediction',
+    prevPredictions: 'Previous Signals',
+    startBtn: 'Start',
+    switchToCrash: 'Crash',
+    switchToApple: 'Apple',
+    dbClosedTitle: 'Database Closed',
+    dbClosedDesc: 'Predictions are stopped because the database path is currently closed.',
+    waitingPhase: 'Ready for Takeoff',
+    flightPhase: 'In Flight · Updates Locked',
+    crashedPhase: 'Round Ended · Awaiting Next Round',
+    waitingNextRound: 'Waiting for next round waiting phase...',
+    roundLabel: 'Round',
+    noHistoryYet: 'No finished rounds yet',
+    overrideToggle: 'Send Custom Override',
+    overrideRoundPlaceholder: 'Round #',
+    overridePointPlaceholder: 'Multiplier (e.g. 2.50)',
+    overrideSend: 'Send Override',
+    overrideSent: 'Override sent successfully',
+    overrideErrorRound:
+      'Cannot override an active/ended round — target waiting round or future round.',
+    overrideErrorClosed: 'Failed: Database is closed.',
+    overrideErrorGeneric: 'Failed to send override.',
+    autoSyncActive: 'Auto-prediction active · Real-time sync',
+    syncNowBtn: 'Auto Sync',
+  },
+} as const;
